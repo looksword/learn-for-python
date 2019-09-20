@@ -1,0 +1,176 @@
+Python MongoDB
+
+安装 pymongo:
+	python3 -m pip3 install pymongo
+
+
+创建数据库
+	import pymongo
+	myclient = pymongo.MongoClient("mongodb://localhost:27017/")
+	mydb = myclient["runoobdb"]
+
+在 MongoDB 中，数据库只有在内容插入后才会创建! 
+就是说，数据库创建后要创建集合(数据表)并插入一个文档(记录)，数据库才会真正创建。
+
+
+我们可以读取 MongoDB 中的所有数据库，并判断指定的数据库是否存在：
+	import pymongo
+	myclient = pymongo.MongoClient('mongodb://localhost:27017/')
+	dblist = myclient.list_database_names()
+	# dblist = myclient.database_names()	# database_names 在最新版本的 Python 中已废弃，Python3.7+ 之后的版本改为了 list_database_names()。
+	if "runoobdb" in dblist:
+		print("数据库已存在！")
+
+
+创建集合
+	# MongoDB 中的集合类似 SQL 的表。
+	import pymongo
+	myclient = pymongo.MongoClient("mongodb://localhost:27017/")
+	mydb = myclient["runoobdb"]
+	mycol = mydb["sites"]
+
+在 MongoDB 中，集合只有在内容插入后才会创建! 
+就是说，创建集合(数据表)后要再插入一个文档(记录)，集合才会真正创建。
+
+
+判断集合是否已存在
+	import pymongo
+	myclient = pymongo.MongoClient('mongodb://localhost:27017/')
+	mydb = myclient['runoobdb']
+	collist = mydb. list_collection_names()
+	# collist = mydb.collection_names()
+	if "sites" in collist:   # 判断 sites 集合是否存在
+		print("集合已存在！")
+
+
+插入集合 
+	# 集合中插入文档使用 insert_one() 方法，该方法的第一参数是字典 name => value 对。
+	import pymongo
+	myclient = pymongo.MongoClient("mongodb://localhost:27017/")
+	mydb = myclient["runoobdb"]
+	mycol = mydb["sites"]
+	mydict = { "name": "RUNOOB", "alexa": "10000", "url": "https://www.runoob.com" }
+	x = mycol.insert_one(mydict) 
+	print(x)
+	print(x)
+	
+insert_one() 方法返回 InsertOneResult 对象，该对象包含 inserted_id 属性，它是插入文档的 id 值。
+
+
+插入多个文档 
+	# 集合中插入多个文档使用 insert_many() 方法，该方法的第一参数是字典列表。
+	import pymongo
+	myclient = pymongo.MongoClient("mongodb://localhost:27017/")
+	mydb = myclient["runoobdb"]
+	mycol = mydb["sites"]
+	mylist = [
+	  { "name": "Taobao", "alexa": "100", "url": "https://www.taobao.com" },
+	  { "name": "QQ", "alexa": "101", "url": "https://www.qq.com" },
+	  { "name": "Facebook", "alexa": "10", "url": "https://www.facebook.com" },
+	  { "name": "知乎", "alexa": "103", "url": "https://www.zhihu.com" },
+	  { "name": "Github", "alexa": "109", "url": "https://www.github.com" }
+	]
+	x = mycol.insert_many(mylist)
+	# 输出插入的所有文档对应的 _id 值
+	print(x.inserted_ids)
+
+
+查询一条数据 
+	# 我们可以使用 find_one() 方法来查询集合中的一条数据。
+	import pymongo
+	myclient = pymongo.MongoClient("mongodb://localhost:27017/")
+	mydb = myclient["runoobdb"]
+	mycol = mydb["sites"]
+	x = mycol.find_one()
+	print(x)
+
+
+查询集合中所有数据
+	# find() 方法可以查询集合中的所有数据，类似 SQL 中的 SELECT * 操作。
+	import pymongo
+	myclient = pymongo.MongoClient("mongodb://localhost:27017/")
+	mydb = myclient["runoobdb"]
+	mycol = mydb["sites"]
+	for x in mycol.find():
+	  print(x)
+
+	# find 的使用方法：find({},{ "_id": 0, "name": 1, "alexa": 1 })
+	# 除了 _id 你不能在一个对象中同时指定 0 和 1，如果你设置了一个字段为 0，则其他都为 1，反之亦然。
+	# find 的过滤方法：find({ "name": "RUNOOB" })
+	# 读取 name 字段中第一个字母 ASCII 值大于 "H" 的数据，大于的修饰符条件为 {"$gt": "H"} :
+	# find({ "name": { "$gt": "H" } })
+	# 读取 name 字段中第一个字母为 "R" 的数据，正则表达式修饰符条件为 {"$regex": "^R"} :
+	# find({ "name": { "$regex": "^R" } })
+	# 对查询结果设置指定条数的记录可以使用 limit() 方法
+	# find().limit(3)
+	
+	# sort() 方法可以指定升序或降序排序。
+	# sort() 方法第一个参数为要排序的字段，第二个字段指定排序规则，1 为升序，-1 为降序，默认为升序。
+	# find().sort("alexa")	# 对字段 alexa 按升序排序
+	# find().sort("alexa", -1)	# 对字段 alexa 按降序排序
+	
+	
+
+我们可以在 MongoDB 中使用 update_one() 方法修改文档中的记录。
+该方法第一个参数为查询的条件，第二个参数为要修改的字段。
+	import pymongo
+	myclient = pymongo.MongoClient("mongodb://localhost:27017/")
+	mydb = myclient["runoobdb"]
+	mycol = mydb["sites"]
+	myquery = { "alexa": "10000" }
+	newvalues = { "$set": { "alexa": "12345" } }
+	mycol.update_one(myquery, newvalues)
+	# 输出修改后的  "sites"  集合
+	for x in mycol.find():
+		print(x)
+	
+update_one() 方法只能修匹配到的第一条记录，如果要修改所有匹配到的记录，可以使用 update_many()。
+	import pymongo
+	myclient = pymongo.MongoClient("mongodb://localhost:27017/")
+	mydb = myclient["runoobdb"]
+	mycol = mydb["sites"]
+	myquery = { "name": { "$regex": "^F" } }
+	newvalues = { "$set": { "alexa": "123" } }
+	x = mycol.update_many(myquery, newvalues)
+	print(x.modified_count, "文档已修改")
+
+
+
+我们可以使用 delete_one() 方法来删除一个文档，该方法第一个参数为查询对象，指定要删除哪些数据。
+	import pymongo
+	myclient = pymongo.MongoClient("mongodb://localhost:27017/")
+	mydb = myclient["runoobdb"]
+	mycol = mydb["sites"]
+	myquery = { "name": "Taobao" }
+	mycol.delete_one(myquery)
+	# 删除后输出
+	for x in mycol.find():
+		print(x)
+
+
+我们可以使用 delete_many() 方法来删除多个文档，该方法第一个参数为查询对象，指定要删除哪些数据。
+	import pymongo
+	myclient = pymongo.MongoClient("mongodb://localhost:27017/")
+	mydb = myclient["runoobdb"]
+	mycol = mydb["sites"]
+	myquery = { "name": {"$regex": "^F"} }
+	x = mycol.delete_many(myquery)
+	print(x.deleted_count, "个文档已删除")
+	
+	# delete_many() 方法如果传入的是一个空的查询对象，则会删除集合中的所有文档：
+	# delete_many({})
+
+
+我们可以使用 drop() 方法来删除一个集合。
+	import pymongo
+	myclient = pymongo.MongoClient("mongodb://localhost:27017/")
+	mydb = myclient["runoobdb"]
+	mycol = mydb["sites"]
+	mycol.drop()
+
+	# 如果删除成功 drop() 返回 true，如果删除失败(集合不存在)则返回 false。
+	
+我们使用以下命令在终端查看集合是否已删除：
+	# > use runoobdb
+	# > show tables;
+
