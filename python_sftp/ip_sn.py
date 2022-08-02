@@ -252,7 +252,7 @@ if __name__ == '__main__':
         host = row[0]#'10.1.45.37'
         sn = row[1]
         user = 'root'
-        password = 'rockchip'
+        password = '123456'
         cmd = 'chmod -R 777 /custom'
         arg = {'ip':'填ip','user':'填用户名','password':'填密码','port':22,'sn':'logname'}
         arg['ip'] = host
