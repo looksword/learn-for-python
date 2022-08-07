@@ -47,9 +47,13 @@ class MainWindow(object):
         print(tmpstr)
         Write2Txt(_TXTDIR,self.arg['sn'] + r'.txt',tmpstr)
         try:
-            transport = paramiko.Transport((self.arg['ip'], self.arg['port']))
-            transport.connect(username=self.arg['user'], password=self.arg['password'])
-            self.sftp = paramiko.SFTPClient.from_transport(transport)
+            #transport = paramiko.Transport((self.arg['ip'], self.arg['port']))
+            #transport.connect(username=self.arg['user'], password=self.arg['password'])
+            #self.sftp = paramiko.SFTPClient.from_transport(transport)
+            self.ssh = paramiko.SSHClient()
+            self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            self.ssh.connect(self.arg['ip'], username=self.arg['user'], password=self.arg['password'], timeout=10)
+            self.sftp = self.ssh.open_sftp()
             print(u'连接成功 '+self.arg['ip'])
         except Exception as e:
             self.transferFailed = True
@@ -290,4 +294,6 @@ if __name__ == '__main__':
         if not me.transferFailed :
             ssh_exec_command(host,user,password,cmd,sn)
             Write2Txt(_TXTDIR,sn + r'.txt',sn+' finish upload.\n')
-    print(listFailed)
+    with open('listFailed.csv', 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerows(listFailed)
