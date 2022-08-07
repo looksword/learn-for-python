@@ -5,6 +5,7 @@ import sys
 import paramiko
 import os
 import csv
+import configparser
 
 _XFER_FILE = 'FILE'
 _XFER_DIR  = 'DIR'
@@ -29,6 +30,9 @@ class MainWindow(object):
         self.arg = arg
         # 赋值参数[FTP]
         self.sftp = None
+        
+        # 传送失败记录
+        self.transferFailed = False
 
         # 调试日志
         print(self.arg)
@@ -48,7 +52,9 @@ class MainWindow(object):
             self.sftp = paramiko.SFTPClient.from_transport(transport)
             print(u'连接成功 '+self.arg['ip'])
         except Exception as e:
+            self.transferFailed = True
             print(u'连接失败：'+str(e))
+            Write2Txt(_TXTDIR,self.arg['sn'] + r'.txt',u'连接失败：'+str(e))
 
     # 关闭程序
     def shutdown(self):
@@ -131,16 +137,19 @@ class MainWindow(object):
         ### 验证数据
         # 验证文件类型
         if not os.path.isfile(filepath):
+            self.transferFailed = True
             print(u'这个函数是用来传送单个文件的')
             Write2Txt(_TXTDIR,self.arg['sn'] + r'.txt',u'这个函数是用来传送单个文件的')
             return
         # 验证文件存在
         if not os.path.exists(filepath):
+            self.transferFailed = True
             print(u'err:本地文件不存在，检查一下'+filepath)
             Write2Txt(_TXTDIR,self.arg['sn'] + r'.txt',u'err:本地文件不存在，检查一下'+filepath)
             return
         # 验证FTP已连接
         if self.sftp == None:
+            self.transferFailed = True
             print(u'sftp 还未链接')
             Write2Txt(_TXTDIR,self.arg['sn'] + r'.txt',u'sftp 还未链接')
             return
@@ -158,6 +167,7 @@ class MainWindow(object):
             print(u'[+] 上传成功:' + filepath + ' -> ' + self.sftp.getcwd() + '/' + filename)
             Write2Txt(_TXTDIR,self.arg['sn'] + r'.txt',u'[+] 上传成功:' + filepath + ' -> ' + self.sftp.getcwd() + '/' + filename)
         except Exception as e:
+            self.transferFailed = True
             print(u'[+] 上传失败:' + filepath + ' because ' + str(e))
             Write2Txt(_TXTDIR,self.arg['sn'] + r'.txt',u'[+] 上传失败:' + filepath + ' because ' + str(e))
 
@@ -237,12 +247,17 @@ def ssh_exec_command(host,user,password, cmd,sn,timeout=10):
         Write2Txt(_TXTDIR,self.arg['sn'] + r'.txt',"错误, 登录服务器或者执行命令超时!!! ip: {} 命令: {}".format(ip,cmd))
 
 if __name__ == '__main__':
+    conf = configparser.ConfigParser()
+    conf.read("config.ini", encoding="utf-8")
+    
     ip_sn = []
     with open('ip_sn.csv', 'r', newline='') as csvfile:
         spamreader = csv.reader(csvfile)
         for row in spamreader:
             ip_sn.append(row)
     print(ip_sn)
+    
+    listFailed = []
     
     for row in ip_sn:
         # """
@@ -251,8 +266,8 @@ if __name__ == '__main__':
         # """
         host = row[0]#'10.1.45.37'
         sn = row[1]
-        user = 'root'
-        password = '123456'
+        user = conf.get('cas','username')
+        password = conf.get('cas','password')
         cmd = 'chmod -R 777 /custom'
         arg = {'ip':'填ip','user':'填用户名','password':'填密码','port':22,'sn':'logname'}
         arg['ip'] = host
@@ -262,15 +277,17 @@ if __name__ == '__main__':
         
         me  = MainWindow(arg)
         me.startup()
-        # 要上传的本地文件夹路径
-        source = os.getcwd()+r'/custom'#r'E:\looksword\jupyter\custom'
-        # 上传到哪里 [远程目录]
-        target = r'/custom'
-        replace = True
-        me.upload(source, target, replace)
+        if not me.transferFailed :
+            # 要上传的本地文件夹路径
+            source = os.getcwd()+r'/custom'#r'E:\looksword\jupyter\custom'
+            # 上传到哪里 [远程目录]
+            target = r'/custom'
+            replace = True
+            me.upload(source, target, replace)
+        if me.transferFailed :
+            listFailed.append((host,sn))
         me.shutdown()
-
-        ssh_exec_command(host,user,password,cmd,sn)
-        
-        print(sn)
-        Write2Txt(_TXTDIR,sn + r'.txt',sn+' finish upload.\n')
+        if not me.transferFailed :
+            ssh_exec_command(host,user,password,cmd,sn)
+            Write2Txt(_TXTDIR,sn + r'.txt',sn+' finish upload.\n')
+    print(listFailed)
